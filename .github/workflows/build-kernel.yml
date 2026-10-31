@@ -1,5 +1,5 @@
 
-name: Kernel Exynos 850 - Compilacao
+name: Galaxy A21s - KernelSU Next
 
 on:
   workflow_dispatch:
@@ -17,16 +17,36 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential bc bison flex libssl-dev \
-            libelf-dev libncurses-dev python3 \
-            clang lld llvm gcc-aarch64-linux-gnu \
-            gcc-arm-linux-gnueabi device-tree-compiler
+            build-essential bc bison flex \
+            libssl-dev libelf-dev libncurses-dev \
+            python3 clang lld llvm \
+            gcc-aarch64-linux-gnu \
+            gcc-arm-linux-gnueabi \
+            device-tree-compiler
+
+      - name: Integrar KernelSU Next Legacy
+        run: |
+          curl -fLSs \
+            https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh \
+            -o /tmp/kernelsu-setup.sh
+          bash /tmp/kernelsu-setup.sh legacy
 
       - name: Configurar kernel
         run: |
           make O=out ARCH=arm64 \
             exynos850-a21snsxx_defconfig
           test -f out/.config
+
+      - name: Verificar KernelSU Next
+        run: |
+          echo "Procurando driver KernelSU..."
+          test -d KernelSU
+
+          echo "Verificando configuracao..."
+          grep -E '^CONFIG_KSU=y$|^CONFIG_KSU_NEXT=y$' \
+            out/.config
+
+          echo "KernelSU habilitado!"
 
       - name: Compilar kernel
         run: |
@@ -38,14 +58,13 @@ jobs:
 
       - name: Verificar resultado
         run: |
-          find out/arch/arm64/boot \
-            -type f \( -name 'Image.gz' -o -name '*.dtb' \)
           test -f out/arch/arm64/boot/Image.gz
+          echo "Kernel compilado!"
 
       - name: Salvar resultado
         uses: actions/upload-artifact@v4
         with:
-          name: exynos850-kernel-teste
+          name: a21s-kernelsu-next-teste
           path: |
             out/arch/arm64/boot/Image.gz
             out/arch/arm64/boot/dts/**/*.dtb
