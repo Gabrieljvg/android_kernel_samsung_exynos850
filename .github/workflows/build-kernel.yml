@@ -1,0 +1,26 @@
+
+name: Kernel Exynos 850 - Preparacao
+
+on:
+  workflow_dispatch:
+
+jobs:
+  verificar-kernel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Baixar codigo do kernel
+        uses: actions/checkout@v4
+
+      - name: Verificar codigo e ferramentas
+        run: |
+          echo "Verificando kernel Exynos 850..."
+          uname -a
+          test -f Makefile
+          grep -E '^(VERSION|PATCHLEVEL|SUBLEVEL) =' Makefile
+          echo "Configuracoes disponiveis:"
+          find arch/arm64/configs -iname '*exynos*' -o -iname '*universal3830*'
+          echo "Compiladores instalados:"
+          clang --version | head -n 1
+          make --version | head -n 1
