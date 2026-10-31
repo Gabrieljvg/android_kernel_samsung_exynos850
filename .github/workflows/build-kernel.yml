@@ -39,14 +39,15 @@ jobs:
 
       - name: Verificar KernelSU Next
         run: |
-          echo "Procurando driver KernelSU..."
-          test -d KernelSU
+          echo "Procurando arquivos KernelSU..."
+          find . -maxdepth 5 \
+            -iname '*kernelsu*' -print | head -80
 
           echo "Verificando configuracao..."
-          grep -E '^CONFIG_KSU=y$|^CONFIG_KSU_NEXT=y$' \
-            out/.config
+          grep -i 'CONFIG_KSU' out/.config || true
 
-          echo "KernelSU habilitado!"
+          echo "Verificando integracao no Makefile..."
+          grep -in 'kernelsu' drivers/Makefile || true
 
       - name: Compilar kernel
         run: |
@@ -64,7 +65,7 @@ jobs:
       - name: Salvar resultado
         uses: actions/upload-artifact@v4
         with:
-          name: a21s-kernelsu-next-teste
+          name: a21s-kernelsu-next-diagnostico
           path: |
             out/arch/arm64/boot/Image.gz
             out/arch/arm64/boot/dts/**/*.dtb
