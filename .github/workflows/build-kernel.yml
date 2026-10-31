@@ -1,26 +1,52 @@
 
-name: Kernel Exynos 850 - Preparacao
+name: Kernel Exynos 850 - Compilacao
 
 on:
   workflow_dispatch:
 
 jobs:
-  verificar-kernel:
+  compilar-kernel:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 120
 
     steps:
       - name: Baixar codigo do kernel
         uses: actions/checkout@v4
 
-      - name: Verificar codigo e ferramentas
+      - name: Instalar dependencias
         run: |
-          echo "Verificando kernel Exynos 850..."
-          uname -a
-          test -f Makefile
-          grep -E '^(VERSION|PATCHLEVEL|SUBLEVEL) =' Makefile
-          echo "Configuracoes disponiveis:"
-          find arch/arm64/configs -iname '*exynos*' -o -iname '*universal3830*'
-          echo "Compiladores instalados:"
-          clang --version | head -n 1
-          make --version | head -n 1
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential bc bison flex libssl-dev \
+            libelf-dev libncurses-dev python3 \
+            clang lld llvm gcc-aarch64-linux-gnu \
+            gcc-arm-linux-gnueabi device-tree-compiler
+
+      - name: Configurar kernel
+        run: |
+          make O=out ARCH=arm64 \
+            exynos850-a21snsxx_defconfig
+          test -f out/.config
+
+      - name: Compilar kernel
+        run: |
+          make -j2 O=out ARCH=arm64 \
+            LLVM=1 LLVM_IAS=1 \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
+            Image.gz dtbs
+
+      - name: Verificar resultado
+        run: |
+          find out/arch/arm64/boot \
+            -type f \( -name 'Image.gz' -o -name '*.dtb' \)
+          test -f out/arch/arm64/boot/Image.gz
+
+      - name: Salvar resultado
+        uses: actions/upload-artifact@v4
+        with:
+          name: exynos850-kernel-teste
+          path: |
+            out/arch/arm64/boot/Image.gz
+            out/arch/arm64/boot/dts/**/*.dtb
+          if-no-files-found: error
